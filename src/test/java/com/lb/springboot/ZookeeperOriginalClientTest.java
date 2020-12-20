@@ -1,32 +1,49 @@
 package com.lb.springboot;
 
-import com.lb.springboot.zk.config.ZkClusterConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 
+/**
+ * zk原生客户端测试
+ */
 @Slf4j
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ZookeeperClientApplicationTests {
+class ZookeeperOriginalClientTest {
 
-	@Autowired
-	private ZkClusterConfig zkClusterConfig;
+	@Value("${zookeeper.cluster.hosts}")
+	private String hosts;
+
+	@Value("${zookeeper.cluster.sessionTimeout}")
+	private Integer sessionTimeout;
 
 	private ZooKeeper zk;
 
+	static class ZkOriginalWatcher implements Watcher {
+		@Override
+		public void process(WatchedEvent event) {
+			log.info("watched event: {}",event);
+			if (event.getState() == Event.KeeperState.SyncConnected){
+				log.info("已连接");
+			}
+		}
+	}
+
 	@BeforeAll
-	public void initZooKeeper(){
-		zk = zkClusterConfig.zooKeeper();
+	public void initZooKeeper()throws Exception{
+		zk = new ZooKeeper(hosts,sessionTimeout,new ZkOriginalWatcher());
 		log.info("init zk: {}",zk);
 	}
 
@@ -58,6 +75,4 @@ class ZookeeperClientApplicationTests {
 		zk.delete(path+"/snode3",-1);
 
 	}
-
-
 }
